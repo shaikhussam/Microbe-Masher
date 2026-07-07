@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ANTIBIOTIC AVENGERS — Microbe Masher</title>
+<style>
+  :root{
+    --ink:#0a1230;
+    --paper:#0e1a44;
+    --red:#e62429;
+    --blue:#2b6cff;
+    --cyan:#1d9bf0;
+    --yellow:#ffd23f;
+    --magenta:#ff2d78;
+    --violet:#7b2ff7;
+    --green:#34c759;
+    --teal:#17c3b2;
+    --amber:#ff9f1c;
+    --gpos:#7b2ff7;   /* crystal violet  */
+    --gneg:#ff3d71;   /* safranin pink   */
+    --atyp:#17c3b2;   /* teal            */
+    --anae:#c77800;   /* amber/olive     */
+    --line:#08102e;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;}
+  body{
+    font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;
+    color:#fff;
+    background:#070d24;
+    overflow:hidden;
+    user-select:none;
+  }
+  .display{font-family:Impact,Haettenschweiler,"Arial Narrow Bold","Franklin Gothic Bold",sans-serif;letter-spacing:.5px;}
+
+  /* ---------- app shell ---------- */
+  #app{
+    position:relative;width:100%;height:100dvh;max-width:1000px;margin:0 auto;
+    display:flex;flex-direction:column;
+    background:
+      radial-gradient(circle at 22% 18%, rgba(43,108,255,.30), transparent 42%),
+      radial-gradient(circle at 82% 12%, rgba(255,45,120,.26), transparent 40%),
+      radial-gradient(circle at 50% 105%, rgba(255,210,63,.20), transparent 48%),
+      var(--paper);
+    border-left:6px solid #000;border-right:6px solid #000;
+    overflow:hidden;
+  }
+  /* halftone dot texture overlay */
+  #app::before{
+    content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+    background-image:radial-gradient(rgba(255,255,255,.10) 1.4px, transparent 1.6px);
+    background-size:16px 16px;
+    mix-blend-mode:screen;opacity:.55;
+  }
+
+  /* ---------- HUD ---------- */
+  #hud{
+    position:relative;z-index:5;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    padding:8px 12px;background:linear-gradient(180deg,#000,#101a40);
+    border-bottom:5px solid #000;
+  }
+  #hud .brand{font-size:20px;line-height:1;color:var(--yellow);
+    -webkit-text-stroke:1.5px #000;text-shadow:2px 2px 0 var(--red);}
+  .stat{display:flex;align-items:center;gap:5px;background:#000;border:3px solid #000;
+    border-radius:10px;padding:3px 9px;font-weight:800;font-size:13px;
+    box-shadow:0 3px 0 #00000088;}
+  .stat b{font-family:Impact,sans-serif;font-size:17px;color:#fff;}
+  .stat.score b{color:var(--yellow);} .stat.level b{color:var(--cyan);}
+  .stat.combo b{color:var(--magenta);}
+  #hearts{font-size:18px;letter-spacing:1px;filter:drop-shadow(1px 1px 0 #000);}
+  .spacer{flex:1;}
+  .iconbtn{font-family:Impact,sans-serif;font-size:13px;color:#000;background:var(--yellow);
+    border:3px solid #000;border-radius:10px;padding:5px 10px;cursor:pointer;font-weight:900;
+    box-shadow:0 3px 0 #000;}
+  .iconbtn:active{transform:translateY(2px);box-shadow:0 1px 0 #000;}
+  .iconbtn.muted{background:#888;color:#222;}
+
+  /* ---------- playfield ---------- */
+  #field{position:relative;flex:1;z-index:1;overflow:hidden;}
+  #wave-banner{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:6;
+    font-family:Impact,sans-serif;font-size:15px;color:#fff;background:var(--red);
+    border:3px solid #000;border-radius:20px;padding:3px 14px;
+    box-shadow:0 3px 0 #000;white-space:nowrap;}
+
+  /* patient zone */
+  #patient{position:absolute;left:0;right:0;bottom:0;height:48px;z-index:2;
+    background:repeating-linear-gradient(45deg,#101a40,#101a40 14px,#16245a 14px,#16245a 28px);
+    border-top:5px dashed var(--yellow);
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    font-family:Impact,sans-serif;letter-spacing:1px;color:var(--yellow);
+    text-shadow:1px 1px 0 #000;font-size:15px;}
+  #patient .pulse{font-size:22px;animation:beat 1s infinite;}
+  @keyframes beat{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
+
+  /* ---------- germ ---------- */
+  .germ{position:absolute;width:66px;height:66px;z-index:3;cursor:pointer;
+    will-change:transform;}
+  .germ .spikes{position:absolute;inset:0;
+    clip-path:polygon(50% 0%,59.8% 13.3%,75% 6.7%,76.9% 23.1%,93.3% 25%,86.7% 40.2%,100% 50%,86.7% 59.8%,93.3% 75%,76.9% 76.9%,75% 93.3%,59.8% 86.7%,50% 100%,40.2% 86.7%,25% 93.3%,23.1% 76.9%,6.7% 75%,13.3% 59.8%,0% 50%,13.3% 40.2%,6.7% 25%,23.1% 23.1%,25% 6.7%,40.2% 13.3%);
+    filter:drop-shadow(0 4px 0 rgba(0,0,0,.45));animation:wob 2.4s ease-in-out infinite;}
+  .germ .face{position:absolute;inset:13%;border-radius:50%;border:3px solid #000;
+    display:flex;align-items:center;justify-content:center;gap:8px;}
+  .germ .eye{width:14px;height:16px;background:#fff;border:2.5px solid #000;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;}
+  .germ .eye i{width:6px;height:6px;background:#000;border-radius:50%;}
+  .germ .mouth{position:absolute;bottom:20%;width:18px;height:8px;border:2.5px solid #000;
+    border-top:none;border-radius:0 0 12px 12px;background:#00000033;}
+  .germ .lbl{position:absolute;top:-15px;left:50%;transform:translateX(-50%);
+    font-family:Impact,sans-serif;font-size:11px;background:#000;color:#fff;
+    padding:1px 6px;border-radius:8px;white-space:nowrap;border:2px solid #000;}
+  .germ .reticle{position:absolute;inset:-9px;border:4px dashed var(--yellow);border-radius:50%;
+    opacity:0;animation:spin 3s linear infinite;pointer-events:none;}
+  .germ .shield{position:absolute;inset:-6px;border:4px solid #fff;border-radius:50%;opacity:0;
+    box-shadow:0 0 14px #fff,inset 0 0 14px #fff;pointer-events:none;}
+  .germ.selected{transform:translate(var(--gx),var(--gy)) scale(1.12);}
+  .germ.selected .reticle{opacity:1;}
+  .germ.shielded .shield{opacity:.9;}
+  .germ.gram-pos .spikes{background:radial-gradient(circle at 38% 32%,#b07bff,var(--gpos));}
+  .germ.gram-pos .face{background:radial-gradient(circle at 38% 30%,#caa6ff,var(--gpos));}
+  .germ.gram-neg .spikes{background:radial-gradient(circle at 38% 32%,#ff7ea0,var(--gneg));}
+  .germ.gram-neg .face{background:radial-gradient(circle at 38% 30%,#ffb3c6,var(--gneg));}
+  .germ.gram-atyp .spikes{background:radial-gradient(circle at 38% 32%,#5fe6da,var(--atyp));}
+  .germ.gram-atyp .face{background:radial-gradient(circle at 38% 30%,#a7f0e9,var(--atyp));}
+  .germ.gram-anae .spikes{background:radial-gradient(circle at 38% 32%,#f0a23a,var(--anae));}
+  .germ.gram-anae .face{background:radial-gradient(circle at 38% 30%,#f7c87e,var(--anae));}
+  .germ.mdr{animation:mdrpulse 1.1s ease-in-out infinite;}
+  .germ.mdr .face{box-shadow:inset 0 0 0 3px #ff1744;}
+  .germ.mdr .spikes{filter:drop-shadow(0 4px 0 rgba(0,0,0,.45)) drop-shadow(0 0 6px #ff1744);}
+  .germ .mdrtag{position:absolute;top:-15px;right:-8px;z-index:4;font-family:Impact,sans-serif;
+    font-size:10px;background:#ff1744;color:#fff;border:2px solid #000;border-radius:7px;
+    padding:0 5px;letter-spacing:1px;box-shadow:0 2px 0 #000;}
+  @keyframes mdrpulse{0%,100%{filter:drop-shadow(0 0 0 #ff1744)}50%{filter:drop-shadow(0 0 10px #ff1744)}}
+  @keyframes wob{0%,100%{transform:rotate(-7deg) scale(1)}50%{transform:rotate(7deg) scale(1.04)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* explosion + pop text */
+  .boom{position:absolute;z-index:7;pointer-events:none;font-family:Impact,sans-serif;
+    transform:translate(-50%,-50%);}
+  .boom .word{font-size:38px;color:var(--yellow);-webkit-text-stroke:2.5px #000;
+    text-shadow:4px 4px 0 var(--red);animation:pop .7s ease-out forwards;}
+  .boom.bad .word{color:#fff;text-shadow:4px 4px 0 var(--ink);-webkit-text-stroke:2.5px var(--red);font-size:28px;}
+  @keyframes pop{0%{transform:scale(.2) rotate(-12deg);opacity:0}
+    40%{transform:scale(1.25) rotate(6deg);opacity:1}100%{transform:scale(1.1) rotate(0);opacity:0}}
+  .burst{position:absolute;z-index:6;width:120px;height:120px;transform:translate(-50%,-50%);
+    background:conic-gradient(var(--yellow) 0 8%,transparent 8% 16.6%,var(--red) 16.6% 24%,transparent 24% 33%,var(--cyan) 33% 41%,transparent 41% 50%,var(--yellow) 50% 58%,transparent 58% 66%,var(--magenta) 66% 75%,transparent 75% 83%,var(--green) 83% 91%,transparent 91% 100%);
+    border-radius:46% 54% 50% 50%/52% 48% 52% 48%;
+    animation:bst .55s ease-out forwards;pointer-events:none;}
+  @keyframes bst{0%{transform:translate(-50%,-50%) scale(.1) rotate(0);opacity:1}
+    100%{transform:translate(-50%,-50%) scale(1.6) rotate(80deg);opacity:0}}
+
+  /* beam */
+  .beam{position:absolute;z-index:5;height:6px;transform-origin:left center;pointer-events:none;
+    border-radius:6px;animation:beamf .22s ease-out forwards;box-shadow:0 0 10px #fff;}
+  @keyframes beamf{0%{opacity:1}100%{opacity:0}}
+
+  /* ---------- clue bubble ---------- */
+  #bubble{position:absolute;left:10px;right:10px;top:42px;z-index:6;display:none;
+    background:#fff;color:#000;border:4px solid #000;border-radius:14px;padding:8px 12px;
+    box-shadow:5px 5px 0 #000;font-size:13px;font-weight:700;line-height:1.25;}
+  #bubble b{color:var(--red);}
+  #bubble .tag{font-family:Impact,sans-serif;font-size:11px;color:#fff;background:var(--blue);
+    padding:1px 8px;border-radius:8px;margin-right:6px;}
+
+  /* fact toast */
+  #fact{position:absolute;left:10px;right:10px;bottom:64px;z-index:6;display:none;
+    background:#000;color:#fff;border:3px solid var(--yellow);border-radius:12px;
+    padding:8px 12px;font-size:12.5px;line-height:1.3;box-shadow:0 4px 0 #00000088;}
+  #fact b{color:var(--yellow);}
+
+  /* ---------- arsenal ---------- */
+  #arsenal-wrap{position:relative;z-index:5;background:linear-gradient(0deg,#000,#0c1638);
+    border-top:5px solid #000;padding:8px 8px calc(8px + env(safe-area-inset-bottom));}
+  #speedbar{display:flex;align-items:center;gap:9px;margin:0 2px 8px;
+    background:#0a1538;border:3px solid #000;border-radius:11px;padding:5px 11px;box-shadow:0 3px 0 #000;}
+  #speedbar .spd-ico{font-size:16px;filter:drop-shadow(1px 1px 0 #000);}
+  #speedbar #speedVal{font-family:Impact,sans-serif;color:var(--yellow);min-width:44px;text-align:right;
+    text-shadow:1px 1px 0 #000;font-size:15px;}
+  #speedSlider{-webkit-appearance:none;appearance:none;flex:1;height:9px;border-radius:6px;
+    background:linear-gradient(90deg,var(--cyan),var(--yellow),var(--magenta),var(--red));
+    outline:none;border:2px solid #000;}
+  #speedSlider::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;
+    background:var(--yellow);border:3px solid #000;box-shadow:0 2px 0 #000;cursor:pointer;}
+  #speedSlider::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:var(--yellow);
+    border:3px solid #000;box-shadow:0 2px 0 #000;cursor:pointer;}
+  #arsenal-title{font-family:Impact,sans-serif;font-size:12px;color:#9fb4ff;letter-spacing:1px;
+    margin:0 2px 6px;display:flex;align-items:center;gap:8px;}
+  #arsenal{display:grid;grid-template-columns:repeat(auto-fit,minmax(76px,1fr));gap:6px;}
+  .chip{position:relative;border:3px solid #000;border-radius:11px;padding:6px 4px 5px;
+    cursor:pointer;text-align:center;color:#fff;font-weight:800;
+    box-shadow:0 4px 0 #000;overflow:hidden;min-height:46px;
+    display:flex;flex-direction:column;justify-content:center;}
+  .chip:active{transform:translateY(3px);box-shadow:0 1px 0 #000;}
+  .chip .abbr{font-family:Impact,sans-serif;font-size:17px;line-height:1;
+    text-shadow:1px 1px 0 #000;}
+  .chip .nm{font-size:9px;line-height:1.05;margin-top:2px;text-shadow:1px 1px 0 #00000099;}
+  .chip.hintglow{animation:glow .7s ease-in-out infinite;border-color:var(--yellow);}
+  @keyframes glow{0%,100%{box-shadow:0 4px 0 #000}50%{box-shadow:0 0 18px var(--yellow),0 4px 0 #000}}
+
+  /* ---------- overlays ---------- */
+  .overlay{position:absolute;inset:0;z-index:20;display:none;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;padding:22px;
+    background:rgba(4,8,26,.92);}
+  .overlay.show{display:flex;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .card{background:#0e1a44;border:5px solid #000;border-radius:18px;padding:20px 18px;
+    max-width:460px;width:100%;box-shadow:8px 8px 0 #000,0 0 0 4px var(--yellow) inset;
+    max-height:92%;overflow:auto;}
+  .title{font-family:Impact,sans-serif;font-size:40px;line-height:.95;color:var(--yellow);
+    -webkit-text-stroke:2px #000;text-shadow:4px 4px 0 var(--red);margin:0 0 4px;}
+  .subtitle{font-size:14px;color:#cdd8ff;font-weight:700;margin:0 0 14px;}
+  .btn{font-family:Impact,sans-serif;font-size:22px;letter-spacing:1px;color:#000;
+    background:var(--yellow);border:4px solid #000;border-radius:14px;padding:11px 22px;
+    cursor:pointer;box-shadow:0 6px 0 #000;margin:6px 4px;}
+  .btn:active{transform:translateY(3px);box-shadow:0 3px 0 #000;}
+  .btn.alt{background:var(--cyan);color:#fff;}
+  .btn.small{font-size:15px;padding:8px 14px;box-shadow:0 4px 0 #000;}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:12px 0 4px;font-size:12px;}
+  .legend span{display:flex;align-items:center;gap:5px;font-weight:700;}
+  .dot{width:14px;height:14px;border-radius:50%;border:2px solid #000;}
+  .how{text-align:left;font-size:13px;line-height:1.5;color:#e7ecff;margin:10px 2px;}
+  .how li{margin:5px 0;}
+  .disc{font-size:11px;color:#9fb0e0;margin-top:12px;line-height:1.4;}
+  .credit{font-size:10.5px;color:#7e8fc4;margin-top:10px;line-height:1.4;}
+  #gatePass{width:100%;font-size:18px;padding:11px 12px;border:4px solid #000;border-radius:12px;
+    background:#0a1538;color:#fff;text-align:center;letter-spacing:3px;font-weight:800;
+    box-shadow:inset 0 2px 0 #0006;margin:6px 0 4px;}
+  #gatePass:focus{outline:none;border-color:var(--yellow);}
+  .gate-err{display:none;color:#ff5d6c;font-weight:800;font-size:13px;margin:4px 0;}
+  .gate-err.show{display:block;}
+  .shake{animation:shake .35s;}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}
+    40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(5px)}}
+  #playerName{width:100%;font-size:16px;padding:10px 12px;border:4px solid #000;border-radius:12px;
+    background:#0a1538;color:#fff;text-align:center;font-weight:800;margin:4px 0 2px;}
+  #playerName:focus{outline:none;border-color:var(--cyan);}
+  .score-list{text-align:left;margin:10px 0 4px;max-height:46vh;overflow:auto;}
+  .score-row{display:grid;grid-template-columns:38px 1fr auto;gap:8px;align-items:center;
+    background:#0a1538;border:3px solid #000;border-radius:10px;padding:7px 10px;margin-bottom:6px;}
+  .score-row .rk{font-family:Impact,sans-serif;font-size:17px;color:#9fb4ff;text-align:center;}
+  .score-row .nm{font-weight:800;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .score-row .nm small{display:block;color:#8fa0d0;font-weight:600;font-size:10.5px;}
+  .score-row .sc{font-family:Impact,sans-serif;font-size:19px;color:var(--yellow);text-align:right;}
+  .score-row.me{border-color:var(--yellow);box-shadow:0 0 0 2px var(--yellow) inset;}
+  .score-row.top1 .rk{color:#ffd23f;font-size:20px}
+  .score-row.top2 .rk{color:#cfd8ff;font-size:20px}
+  .score-row.top3 .rk{color:#e0a458;font-size:20px}
+  .score-empty{color:#9fb0e0;font-size:13px;margin:16px 0;}
+
+  /* codex */
+  .codex-grid{display:grid;grid-template-columns:1fr;gap:8px;text-align:left;margin-top:6px;}
+  .cx{background:#0a1538;border:3px solid #000;border-radius:12px;padding:8px 10px;}
+  .cx h4{margin:0 0 3px;font-size:14px;}
+  .cx .meta{font-size:11px;color:#9fb4ff;font-weight:700;margin-bottom:3px;}
+  .cx .drugs{font-size:11.5px;color:var(--green);font-weight:800;}
+  .cx .fct{font-size:11.5px;color:#dfe6ff;margin-top:4px;line-height:1.35;}
+  .pill{display:inline-block;font-size:9px;font-family:Impact,sans-serif;color:#000;
+    border:2px solid #000;border-radius:7px;padding:1px 6px;margin-left:6px;vertical-align:middle;}
+
+  @media (prefers-reduced-motion: reduce){
+    .germ .spikes{animation:none} .germ .reticle{animation:none}
+  }
+  @media (max-width:380px){
+    #arsenal{grid-template-columns:repeat(auto-fit,minmax(70px,1fr));}
+    .chip .abbr{font-size:15px}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="brand display">💥 MICROBE MASHER</div>
+    <div class="spacer"></div>
+    <div class="stat score">SCORE&nbsp;<b id="score">0</b></div>
+    <div class="stat level">LVL&nbsp;<b id="level">1</b></div>
+    <div class="stat combo" id="comboStat" style="display:none">x<b id="combo">1</b></div>
+    <div class="stat"><span id="hearts">❤️❤️❤️</span></div>
+    <button class="iconbtn" id="hintBtn">💡 HINT <span id="hintCount">3</span></button>
+    <button class="iconbtn" id="muteBtn">🔊</button>
+    <button class="iconbtn" id="pauseBtn">⏸</button>
+  </div>
+
+  <!-- playfield -->
+  <div id="field">
+    <div id="wave-banner" style="display:none"></div>
+    <div id="bubble"></div>
+    <div id="fact"></div>
+    <div id="patient"><span class="pulse">🧑‍⚕️</span> YOUR PATIENT <span class="pulse">❤️</span></div>
+  </div>
+
+  <!-- arsenal -->
+  <div id="arsenal-wrap">
+    <div id="speedbar">
+      <span class="spd-ico" title="Slower">🐢</span>
+      <input type="range" id="speedSlider" min="0.5" max="1.8" step="0.1" value="1" aria-label="Microbe fall speed">
+      <span class="spd-ico" title="Faster">🐇</span>
+      <b id="speedVal">1.0×</b>
+    </div>
+    <div id="arsenal-title">🧪 ANTIBIOTIC ARSENAL — tap a microbe, then fire the right drug</div>
+    <div id="arsenal"></div>
+  </div>
+
+  <!-- ACCESS GATE -->
+  <div class="overlay show" id="gateScreen" style="z-index:40">
+    <div class="card" style="max-width:380px">
+      <div class="title" style="font-size:30px">🔒 STAFF ACCESS</div>
+      <div class="subtitle">Enter the access code to launch Microbe Masher.</div>
+      <input id="gatePass" type="password" autocomplete="off" autocapitalize="off"
+             spellcheck="false" placeholder="Access code">
+      <div id="gateErr" class="gate-err">Incorrect code — try again.</div>
+      <button class="btn" id="gateBtn">▶ UNLOCK</button>
+      <div class="credit" id="gateCredit"></div>
+    </div>
+  </div>
+
+  <!-- START overlay -->
+  <div class="overlay" id="startScreen">
+    <div class="card">
+      <div class="title">ANTIBIOTIC<br>AVENGERS</div>
+      <div class="subtitle">Microbe Masher — pick the right drug, smash the bug!</div>
+      <ul class="how">
+        <li>🦠 Color-coded microbes drift toward your patient.</li>
+        <li>👆 <b>Tap a microbe</b> to target it — read its Gram clue.</li>
+        <li>💊 <b>Fire the correct antibiotic</b> from the arsenal to vaporise it.</li>
+        <li>⚠️ Wrong drug → it turns <b>RESISTANT</b> and keeps coming!</li>
+        <li>💡 Stuck? Spend a <b>Hint</b> to light up the effective drugs.</li>
+        <li>❤️ Don't let bugs reach the patient — you lose a life each time.</li>
+        <li>☠️ Later waves unleash <b>MDROs</b> (VRE, ESBL, CRE, MDR-Pseudomonas) ringed in red — first-line drugs bounce off. Escalate to last-line agents: <b>meropenem, colistin, daptomycin</b>.</li>
+        <li>🔊 Bugs yelp <b>"Ouch!"</b> as they die — and let out a raspy laugh when they resist. Keep your sound on!</li>
+        <li>🐢🐇 Use the <b>speed regulator</b> above the arsenal to slow microbes down or crank up the challenge.</li>
+      </ul>
+      <div class="legend">
+        <span><i class="dot" style="background:#7b2ff7"></i>Gram-positive</span>
+        <span><i class="dot" style="background:#ff3d71"></i>Gram-negative</span>
+        <span><i class="dot" style="background:#17c3b2"></i>Atypical</span>
+        <span><i class="dot" style="background:#c77800"></i>Anaerobe</span>
+        <span><i class="dot" style="background:#ff1744"></i>MDRO (red ring)</span>
+      </div>
+      <div style="font-size:11px;color:#9fb0e0;margin-top:4px">Colours match the real Gram stain: crystal-violet purple vs. safranin pink.</div>
+      <input id="playerName" type="text" maxlength="14" autocomplete="off" spellcheck="false"
+             placeholder="Your name (for the scoreboard)">
+      <div style="margin-top:14px">
+        <button class="btn" id="playBtn">▶ PLAY</button>
+      </div>
+      <div style="margin-top:6px">
+        <button class="btn alt small" id="codexBtn">📖 BUG CODEX</button>
+        <button class="btn alt small" id="startScores">🏆 SCORES</button>
+      </div>
+      <div class="disc">Educational game — clinical content is simplified for learning and is <b>not</b> a prescribing reference. Always verify against your local antibiogram and guidelines.</div>
+      <div class="credit" id="creditLine"></div>
+    </div>
+  </div>
+
+  <!-- pause -->
+  <div class="overlay" id="pauseScreen">
+    <div class="card">
+      <div class="title" style="font-size:34px">PAUSED</div>
+      <button class="btn" id="resumeBtn">▶ RESUME</button>
+      <button class="btn alt small" id="restartBtn">↻ RESTART</button>
+      <button class="btn alt small" id="pauseScores">🏆 SCORES</button>
+    </div>
+  </div>
+
+  <!-- level complete -->
+  <div class="overlay" id="levelScreen">
+    <div class="card">
+      <div class="title" id="lvlTitle" style="font-size:32px">WAVE CLEARED!</div>
+      <div class="subtitle" id="lvlSub"></div>
+      <button class="btn" id="nextBtn">▶ NEXT WAVE</button>
+    </div>
+  </div>
+
+  <!-- game over -->
+  <div class="overlay" id="overScreen">
+    <div class="card">
+      <div class="title" style="color:#fff;text-shadow:4px 4px 0 var(--red)">PATIENT DOWN</div>
+      <div class="subtitle" id="overSub"></div>
+      <button class="btn" id="retryBtn">↻ TRY AGAIN</button>
+      <button class="btn alt small" id="overScores">🏆 SCOREBOARD</button>
+    </div>
+  </div>
+
+  <!-- win -->
+  <div class="overlay" id="winScreen">
+    <div class="card">
+      <div class="title">VICTORY!</div>
+      <div class="subtitle" id="winSub"></div>
+      <div id="rank" class="display" style="font-size:24px;color:var(--cyan);margin:6px 0 12px"></div>
+      <button class="btn" id="winRetry">↻ PLAY AGAIN</button>
+      <button class="btn alt small" id="winScores">🏆 SCOREBOARD</button>
+    </div>
+  </div>
+
+  <!-- codex -->
+  <div class="overlay" id="codexScreen">
+    <div class="card">
+      <div class="title" style="font-size:30px">📖 BUG CODEX</div>
+      <div class="subtitle">Know your enemy.</div>
+      <div class="codex-grid" id="codexGrid"></div>
+      <button class="btn small" id="codexClose" style="margin-top:14px">✕ CLOSE</button>
+    </div>
+  </div>
+
+  <!-- scoreboard -->
+  <div class="overlay" id="scoreScreen">
+    <div class="card">
+      <div class="title" style="font-size:30px">🏆 SCOREBOARD</div>
+      <div class="subtitle">Top antimicrobial avengers</div>
+      <div id="scoreList" class="score-list"></div>
+      <div style="margin-top:6px">
+        <button class="btn small" id="scoreClose">✕ CLOSE</button>
+        <button class="btn alt small" id="scoreClear">🗑 CLEAR</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------------- DATA ----------------
+  const ARSENAL = [
+    {id:"amox", abbr:"AMX", name:"Amoxicillin",    cls:"Penicillin",        color:"#34c759"},
+    {id:"cefaz",abbr:"CFZ", name:"Cefazolin",      cls:"1st-gen ceph",      color:"#1d9bf0"},
+    {id:"cftri",abbr:"CRO", name:"Ceftriaxone",    cls:"3rd-gen ceph",      color:"#2b6cff"},
+    {id:"ptz",  abbr:"TZP", name:"Pip-Tazo",       cls:"Anti-pseudo",       color:"#7c4dff"},
+    {id:"mero", abbr:"MEM", name:"Meropenem",      cls:"Carbapenem",        color:"#9b30ff"},
+    {id:"vanco",abbr:"VAN", name:"Vancomycin",     cls:"Glycopeptide",      color:"#ff2d78"},
+    {id:"line", abbr:"LZD", name:"Linezolid",      cls:"Oxazolidinone",     color:"#ff5da2"},
+    {id:"cipro",abbr:"CIP", name:"Ciprofloxacin",  cls:"Fluoroquinolone",   color:"#ff7a1c"},
+    {id:"azith",abbr:"AZM", name:"Azithromycin",   cls:"Macrolide",         color:"#ffd23f"},
+    {id:"doxy", abbr:"DOX", name:"Doxycycline",    cls:"Tetracycline",      color:"#c9a227"},
+    {id:"metro",abbr:"MTZ", name:"Metronidazole",  cls:"Nitroimidazole",    color:"#b5651d"},
+    {id:"nitro",abbr:"NIT", name:"Nitrofurantoin", cls:"Nitrofuran",        color:"#e0a458"},
+    {id:"dapto",abbr:"DAP", name:"Daptomycin",     cls:"Lipopeptide",       color:"#c71585"},
+    {id:"colis",abbr:"COL", name:"Colistin",       cls:"Polymyxin·last-line",color:"#6c757d"}
+  ];
+  const DRUG = {}; ARSENAL.forEach(d=>DRUG[d.id]=d);
+
+  const PATHO = [
+    {id:"mssa", abbr:"MSSA", name:"Staph aureus (MSSA)", gram:"pos",
+      clue:"Gram-positive cocci in <b>clusters</b>, coagulase-positive — methicillin-<b>sensitive</b>.",
+      eff:["cefaz","vanco","line"],
+      fact:"<b>MSSA:</b> a β-lactam such as cefazolin is preferred over vancomycin for susceptible strains."},
+    {id:"mrsa", abbr:"MRSA", name:"Staph aureus (MRSA)", gram:"pos",
+      clue:"Gram-positive <b>clusters</b>, methicillin-<b>resistant</b> — β-lactams will fail.",
+      eff:["vanco","line"],
+      fact:"<b>MRSA</b> carries mecA (PBP2a) → resistant to all standard β-lactams. Use vancomycin or linezolid."},
+    {id:"spneu", abbr:"S.pneu", name:"Strep pneumoniae", gram:"pos",
+      clue:"Gram-positive <b>diplococci</b>, lancet-shaped — pneumonia / meningitis.",
+      eff:["amox","cftri"],
+      fact:"<b>S. pneumoniae:</b> amoxicillin or ceftriaxone are the mainstays."},
+    {id:"efaec", abbr:"E.faec", name:"Enterococcus faecalis", gram:"pos",
+      clue:"Gram-positive cocci in <b>chains/pairs</b>, gut flora — <b>cephalosporins miss it!</b>",
+      eff:["amox","vanco"],
+      fact:"<b>Enterococci</b> are intrinsically resistant to ALL cephalosporins. Use ampicillin/amoxicillin or vancomycin."},
+    {id:"ecoli", abbr:"E.coli", name:"Escherichia coli", gram:"neg",
+      clue:"Gram-<b>negative rod</b>, lactose-fermenter — common UTI & bacteraemia.",
+      eff:["cftri","cipro","nitro","mero"],
+      fact:"<b>E. coli:</b> ceftriaxone or a fluoroquinolone for systemic infection; nitrofurantoin for simple cystitis."},
+    {id:"kleb", abbr:"Kleb", name:"Klebsiella pneumoniae", gram:"neg",
+      clue:"Gram-negative rod, mucoid capsule — intrinsically <b>ampicillin-resistant</b>.",
+      eff:["cftri","mero","cipro"],
+      fact:"<b>Klebsiella</b> is intrinsically ampicillin-resistant; use ceftriaxone, or a carbapenem if ESBL."},
+    {id:"pseud", abbr:"Pseud", name:"Pseudomonas aeruginosa", gram:"neg",
+      clue:"Gram-negative rod, oxidase-positive, green pigment — needs <b>anti-pseudomonal</b> cover.",
+      eff:["ptz","mero","cipro"],
+      fact:"<b>Pseudomonas:</b> pip-tazo, meropenem, ceftazidime or cipro. Plain ceftriaxone has no reliable activity."},
+    {id:"hflu", abbr:"H.flu", name:"Haemophilus influenzae", gram:"neg",
+      clue:"Small Gram-negative <b>coccobacillus</b> — respiratory / otitis; may make β-lactamase.",
+      eff:["cftri","azith"],
+      fact:"<b>H. influenzae:</b> ceftriaxone or a macrolide; many strains are β-lactamase-positive (resist plain amoxicillin)."},
+    {id:"nmen", abbr:"N.men", name:"Neisseria meningitidis", gram:"neg",
+      clue:"Gram-negative <b>diplococci</b> — meningitis with purpuric rash.",
+      eff:["cftri","amox"],
+      fact:"<b>N. meningitidis:</b> ceftriaxone empirically; penicillin/amoxicillin if proven susceptible."},
+    {id:"cdiff", abbr:"C.diff", name:"Clostridioides difficile", gram:"anae",
+      clue:"<b>Anaerobic</b> gut bug after antibiotics — toxin-mediated colitis.",
+      eff:["vanco","metro"],
+      fact:"<b>C. difficile:</b> oral vancomycin (or fidaxomicin) first-line; metronidazole for non-severe / alternative cases."},
+    {id:"myco", abbr:"Myco", name:"Mycoplasma pneumoniae", gram:"atyp",
+      clue:"<b>Atypical — no cell wall.</b> β-lactams are useless here!",
+      eff:["azith","doxy"],
+      fact:"<b>Mycoplasma</b> lacks a cell wall → β-lactams don't work. Use a macrolide or doxycycline."},
+    {id:"leg", abbr:"Legio", name:"Legionella pneumophila", gram:"atyp",
+      clue:"<b>Atypical</b> from water / AC systems — hyponatraemia, poor Gram-stain pickup.",
+      eff:["azith","cipro"],
+      fact:"<b>Legionella:</b> a respiratory fluoroquinolone or azithromycin; β-lactams fail."},
+    {id:"vre", abbr:"VRE", name:"Enterococcus (VRE)", gram:"pos", mdr:true,
+      clue:"<b>Vancomycin-RESISTANT</b> Enterococcus (vanA) — vancomycin is dead weight here.",
+      eff:["line","dapto"],
+      fact:"<b>VRE:</b> linezolid or daptomycin; vancomycin no longer works (vanA/vanB)."},
+    {id:"esbl_ec", abbr:"ESBL", name:"E. coli (ESBL)", gram:"neg", mdr:true,
+      clue:"<b>ESBL</b> producer — hydrolyses cephalosporins; 3rd-gen cephs & cipro unreliable.",
+      eff:["mero"],
+      fact:"<b>ESBL Enterobacterales:</b> a carbapenem (meropenem) is the reliable choice."},
+    {id:"cre_kp", abbr:"CRE", name:"Klebsiella (CRE)", gram:"neg", mdr:true,
+      clue:"<b>Carbapenem-RESISTANT</b> Enterobacterales — even meropenem fails!",
+      eff:["colis"],
+      fact:"<b>CRE:</b> last-line agents such as colistin (or ceftazidime-avibactam). Carbapenems are inactive."},
+    {id:"mdr_ps", abbr:"MDR-Pa", name:"Pseudomonas (MDR)", gram:"neg", mdr:true,
+      clue:"<b>Multidrug-resistant</b> Pseudomonas — anti-pseudomonal β-lactams & cipro fail.",
+      eff:["colis"],
+      fact:"<b>MDR Pseudomonas:</b> may require colistin or a novel β-lactam/β-lactamase-inhibitor combo."}
+  ];
+  const BUG = {}; PATHO.forEach(p=>BUG[p.id]=p);
+
+  const LEVELS = [
+    {name:"GRAM-POSITIVE BOOTCAMP", pool:["mssa","spneu","efaec"], count:6, speed:10, gap:1700},
+    {name:"GRAM-NEGATIVE GAUNTLET", pool:["ecoli","kleb","pseud","hflu"], count:8, speed:13, gap:1500},
+    {name:"RESISTANCE & ATYPICALS", pool:["mrsa","myco","leg","cdiff","nmen"], count:10, speed:16, gap:1300},
+    {name:"ESBL EMERGENCY", pool:["esbl_ec","ecoli","kleb","mrsa"], count:11, speed:18, gap:1200},
+    {name:"CARBAPENEM CRISIS", pool:["cre_kp","mdr_ps","vre","esbl_ec"], count:12, speed:21, gap:1050},
+    {name:"PAN-RESISTANT OUTBREAK", pool:PATHO.map(p=>p.id), count:16, speed:25, gap:900}
+  ];
+
+  const POW = ["POW!","BAM!","KO!","ZAP!","BOOM!","WHAM!","KAPOW!","SNAP!","SMASH!"];
+  const BAD = ["RESISTANT!","MUTATED!","SURVIVED!"];
+
+  // ---------------- STATE ----------------
+  const S = {level:0, score:0, lives:3, hints:3, combo:0, running:false, paused:false, over:false,
+            spawned:0, cleared:0, target:0, germs:[], selected:null, muted:false, speedMul:1,
+            spawnTimer:0, last:0, raf:0};
+
+  // ---------------- DOM ----------------
+  const $ = s=>document.querySelector(s);
+  const field=$("#field"), arsenalEl=$("#arsenal"), bubble=$("#bubble"), factEl=$("#fact");
+  const scoreEl=$("#score"), levelEl=$("#level"), comboEl=$("#combo"), comboStat=$("#comboStat"),
+        heartsEl=$("#hearts"), hintCountEl=$("#hintCount"), waveBanner=$("#wave-banner");
+  const patientTop = ()=> field.clientHeight - 48;
+
+  // ---------------- AUDIO (offline, synthesized) ----------------
+  let actx=null;
+  function ac(){ if(!actx){try{actx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}} return actx; }
+  function tone(freq,dur,type,vol){
+    if(S.muted) return; const c=ac(); if(!c) return;
+    const o=c.createOscillator(), g=c.createGain();
+    o.type=type||"square"; o.frequency.value=freq;
+    g.gain.setValueAtTime(vol||0.15, c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime+dur);
+    o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime+dur);
+  }
+  function sZap(){ tone(880,0.08,"square",0.12); setTimeout(()=>tone(1320,0.07,"sawtooth",0.10),40); }
+  function sBoom(){ tone(160,0.18,"triangle",0.22); tone(90,0.28,"sine",0.18); }
+  function sBad(){ tone(140,0.22,"sawtooth",0.20); }
+  function sDing(){ tone(660,0.1,"sine",0.18); setTimeout(()=>tone(990,0.16,"sine",0.18),90); }
+  function sLife(){ tone(200,0.3,"sawtooth",0.2); }
+  function sArtillery(){
+    if(S.muted) return; const c=ac(); if(!c) return;
+    const t=c.currentTime;
+    // launch boom (low thump)
+    const o=c.createOscillator(), g=c.createGain();
+    o.type="sine"; o.frequency.setValueAtTime(170,t); o.frequency.exponentialRampToValueAtTime(38,t+0.2);
+    g.gain.setValueAtTime(0.55,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.24);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+0.26);
+    // whoosh (noise through a descending band-pass) — missile streaking out
+    const len=Math.floor(c.sampleRate*0.32);
+    const b=c.createBuffer(1,len,c.sampleRate); const d=b.getChannelData(0);
+    for(let i=0;i<len;i++){ d[i]=(Math.random()*2-1)*Math.pow(1-i/len,1.1); }
+    const s=c.createBufferSource(); s.buffer=b;
+    const f=c.createBiquadFilter(); f.type="bandpass"; f.Q.value=1.3;
+    f.frequency.setValueAtTime(2000,t); f.frequency.exponentialRampToValueAtTime(280,t+0.3);
+    const ng=c.createGain(); ng.gain.setValueAtTime(0.4,t); ng.gain.exponentialRampToValueAtTime(0.001,t+0.32);
+    s.connect(f); f.connect(ng); ng.connect(c.destination); s.start(t);
+  }
+
+  // ---- voice cries (offline Web Speech API, no files) ----
+  let voicePick=null, maleVoice=null;
+  function loadVoices(){
+    if(!("speechSynthesis" in window)) return;
+    const vs=speechSynthesis.getVoices()||[];
+    if(!vs.length) return;
+    voicePick = vs.find(v=>/^ur\b|ur-|ur_/i.test(v.lang)) ||
+                vs.find(v=>/^hi\b|hi-|hi_/i.test(v.lang)) ||
+                vs.find(v=>/en-(in|pk)/i.test(v.lang)) || null;
+    // try to find a deep / male-sounding voice for the villain laugh
+    const isFemale=v=>/female|woman|samantha|victoria|zira|girl|aria|jenny|eva|hazel/i.test(v.name);
+    maleVoice = vs.find(v=>/\b(male|man|guy|david|james|fred|alex|daniel|george|paul|mark|tom|rishi|ravi|hemant|prabhat)\b/i.test(v.name) && !isFemale(v)) ||
+                vs.find(v=>/male/i.test(v.name)) ||
+                vs.find(v=>!isFemale(v)) || null;
+  }
+  if("speechSynthesis" in window){
+    loadVoices();
+    speechSynthesis.addEventListener("voiceschanged", loadVoices);
+  }
+  function say(text, pitch, rate, prefer){
+    if(S.muted || !("speechSynthesis" in window)) return;
+    try{
+      speechSynthesis.cancel();           // keep cries in sync with the action
+      const u=new SpeechSynthesisUtterance(text);
+      u.pitch=pitch; u.rate=rate; u.volume=1;
+      const v=(prefer==="male" && maleVoice) ? maleVoice : voicePick;
+      if(v){ u.voice=v; u.lang=v.lang; } else { u.lang="ur-PK"; }
+      speechSynthesis.speak(u);
+    }catch(e){}
+  }
+
+  // ---- Smoker's laugh: raspy noise bursts + low growl + deep speech ----
+  function rasp(start,dur,vol){
+    const c=ac(); if(!c) return;
+    const len=Math.floor(c.sampleRate*dur);
+    const b=c.createBuffer(1,len,c.sampleRate); const d=b.getChannelData(0);
+    for(let i=0;i<len;i++){ d[i]=(Math.random()*2-1)*Math.pow(1-i/len,1.4); }
+    const s=c.createBufferSource(); s.buffer=b;
+    const f=c.createBiquadFilter(); f.type="bandpass"; f.frequency.value=400; f.Q.value=2.5;
+    const g=c.createGain(); g.gain.value=vol;
+    s.connect(f); f.connect(g); g.connect(c.destination); s.start(start);
+  }
+  function growl(start,dur,freq,vol){
+    const c=ac(); if(!c) return;
+    const o=c.createOscillator(), g=c.createGain(), lfo=c.createOscillator(), lg=c.createGain();
+    o.type="sawtooth"; o.frequency.value=freq;
+    lfo.type="sine"; lfo.frequency.value=17; lg.gain.value=14;   // phlegmy rattle
+    lfo.connect(lg); lg.connect(o.frequency);
+    const f=c.createBiquadFilter(); f.type="lowpass"; f.frequency.value=850;
+    g.gain.setValueAtTime(0.0001,start);
+    g.gain.exponentialRampToValueAtTime(vol,start+0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001,start+dur);
+    o.connect(f); f.connect(g); g.connect(c.destination);
+    o.start(start); o.stop(start+dur+0.05); lfo.start(start); lfo.stop(start+dur+0.05);
+  }
+  function smokerLaugh(){
+    if(S.muted) return; const c=ac(); if(!c) return;
+    const t=c.currentTime+0.02;
+    const beats=[0,0.23,0.46,0.70,1.00];
+    beats.forEach((b,i)=>{ rasp(t+b,0.17,0.17); growl(t+b,0.19, 86+(i%2?14:0), 0.13); });
+    say("heh heh heh heh haa", 0.3, 0.8, "male");   // deep, slow, gravelly
+  }
+  // high-pitch, loud, taunting male laugh (when a bug breaks through)
+  function tauntLaugh(){
+    if(S.muted) return;
+    say("Ha ha ha ha haa", 1.9, 1.0, "male");
+    [0,120,240,360].forEach((d,i)=>setTimeout(()=>tone(760-i*70,0.08,"square",0.16), d));
+  }
+  let musicMaster=null, musicNodes=[];
+  function stopMusic(){
+    musicNodes.forEach(n=>{try{n.stop();}catch(e){}});
+    musicNodes=[];
+    if(musicMaster){ try{musicMaster.disconnect();}catch(e){} musicMaster=null; }
+  }
+  function mNote(freq,start,dur,type,vol,glideTo){
+    const c=ac(); if(!c||!musicMaster) return;
+    const o=c.createOscillator(), g=c.createGain();
+    o.type=type; o.frequency.setValueAtTime(freq,start);
+    if(glideTo) o.frequency.exponentialRampToValueAtTime(glideTo,start+dur);
+    g.gain.setValueAtTime(0.0001,start);
+    g.gain.exponentialRampToValueAtTime(vol,start+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,start+dur);
+    o.connect(g); g.connect(musicMaster);
+    o.start(start); o.stop(start+dur+0.05); musicNodes.push(o);
+  }
+  function mKick(start){
+    const c=ac(); if(!c||!musicMaster) return;
+    const o=c.createOscillator(), g=c.createGain();
+    o.type="sine"; o.frequency.setValueAtTime(155,start);
+    o.frequency.exponentialRampToValueAtTime(48,start+0.13);
+    g.gain.setValueAtTime(0.55,start); g.gain.exponentialRampToValueAtTime(0.001,start+0.17);
+    o.connect(g); g.connect(musicMaster); o.start(start); o.stop(start+0.2); musicNodes.push(o);
+  }
+  function mHat(start,vol){
+    const c=ac(); if(!c||!musicMaster) return;
+    const len=Math.floor(c.sampleRate*0.05);
+    const b=c.createBuffer(1,len,c.sampleRate); const d=b.getChannelData(0);
+    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.5);
+    const s=c.createBufferSource(); s.buffer=b;
+    const f=c.createBiquadFilter(); f.type="highpass"; f.frequency.value=6500;
+    const g=c.createGain(); g.gain.value=vol||0.07;
+    s.connect(f); f.connect(g); g.connect(musicMaster); s.start(start); musicNodes.push(s);
+  }
+  function playVictoryTheme(){
+    if(S.muted) return; const c=ac(); if(!c) return;
+    stopMusic();
+    musicMaster=c.createGain(); musicMaster.gain.value=0.5; musicMaster.connect(c.destination);
+    const t0=c.currentTime+0.06, bpm=132, beat=60/bpm, bar=beat*4, bars=4;
+    const roots=[82.41,82.41,98.00,110.00];                 // E2 E2 G2 A2 driving bass
+    const lead=[659.25,587.33,493.88,587.33,659.25,783.99,659.25,587.33]; // original E-minor riff
+    for(let b=0;b<bars;b++){
+      const bt=t0+b*bar;
+      for(let i=0;i<8;i++) mHat(bt+i*(beat/2), i%2?0.045:0.075);
+      for(let i=0;i<4;i++) mKick(bt+i*beat);
+      for(let i=0;i<4;i++){
+        mNote(roots[i],bt+i*beat,beat*0.45,"sawtooth",0.17);
+        mNote(roots[i],bt+i*beat+beat/2,beat*0.32,"sawtooth",0.13);
+      }
+      for(let i=0;i<8;i++) mNote(lead[i],bt+i*(beat/2),beat*0.42,"square",0.12);
+    }
+    const tE=t0+bars*bar;                                    // final power chord
+    mKick(tE); mNote(164.81,tE,0.8,"sawtooth",0.2);
+    mNote(659.25,tE,0.8,"square",0.16); mNote(987.77,tE,0.8,"triangle",0.12);
+  }
+
+  // ---------------- BUILD ARSENAL ----------------
+  ARSENAL.forEach(d=>{
+    const b=document.createElement("button");
+    b.className="chip"; b.dataset.id=d.id;
+    b.style.background="linear-gradient(160deg,"+d.color+","+shade(d.color,-26)+")";
+    b.innerHTML='<span class="abbr">'+d.abbr+'</span><span class="nm">'+d.name+'<br>'+d.cls+'</span>';
+    b.addEventListener("click",()=>fireDrug(d.id));
+    arsenalEl.appendChild(b);
+  });
+  function shade(hex,p){
+    const n=parseInt(hex.slice(1),16); let r=(n>>16)&255,g=(n>>8)&255,b=n&255;
+    r=Math.max(0,Math.min(255,r+p)); g=Math.max(0,Math.min(255,g+p)); b=Math.max(0,Math.min(255,b+p));
+    return "#"+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
+  }
+
+  // ---------------- CODEX ----------------
+  const gramName={pos:"Gram-positive",neg:"Gram-negative",atyp:"Atypical",anae:"Anaerobe"};
+  const gramColor={pos:"#7b2ff7",neg:"#ff3d71",atyp:"#17c3b2",anae:"#c77800"};
+  (function(){
+    const g=$("#codexGrid");
+    PATHO.forEach(p=>{
+      const drugs=p.eff.map(id=>DRUG[id].name).join(", ");
+      const el=document.createElement("div"); el.className="cx";
+      el.innerHTML='<h4>'+p.name+'<span class="pill" style="background:'+gramColor[p.gram]+';color:#fff">'+gramName[p.gram]+'</span>'+(p.mdr?'<span class="pill" style="background:#ff1744;color:#fff">MDR</span>':'')+'</h4>'+
+        '<div class="meta">'+p.clue.replace(/<\/?b>/g,"")+'</div>'+
+        '<div class="drugs">✓ '+drugs+'</div>'+
+        '<div class="fct">'+p.fact.replace(/<\/?b>/g,"")+'</div>';
+      g.appendChild(el);
+    });
+  })();
+
+  // ---------------- GAME FLOW ----------------
+  function startGame(){
+    stopMusic();
+    S.level=0; S.score=0; S.lives=3; S.hints=3; S.combo=0;
+    clearGerms(); updateHUD(); startLevel();
+  }
+  function startLevel(){
+    const lv=LEVELS[S.level];
+    S.spawned=0; S.cleared=0; S.target=lv.count; S.selected=null;
+    hideBubble();
+    waveBanner.textContent="WAVE "+(S.level+1)+" — "+lv.name;
+    waveBanner.style.display="block";
+    setTimeout(()=>{ if(S.running) waveBanner.style.display="none"; },2600);
+    S.running=true; S.paused=false; S.last=performance.now(); S.spawnTimer=lv.gap*0.4;
+    cancelAnimationFrame(S.raf); S.raf=requestAnimationFrame(loop);
+    updateHUD();
+  }
+  function loop(ts){
+    if(!S.running){ return; }
+    if(S.paused){ S.last=ts; S.raf=requestAnimationFrame(loop); return; }
+    const dt=Math.min(50, ts-S.last)/1000; S.last=ts;
+    const lv=LEVELS[S.level];
+
+    // spawn
+    if(S.spawned < S.target){
+      S.spawnTimer-=dt*1000;
+      if(S.spawnTimer<=0){ spawnGerm(); S.spawned++; S.spawnTimer=lv.gap; }
+    }
+
+    // move
+    const reach=patientTop();
+    for(let i=S.germs.length-1;i>=0;i--){
+      const g=S.germs[i];
+      if(!g) continue;                 // array may shrink mid-loop (leak/removeGerm)
+      g.y += g.vy*dt*S.speedMul;
+      g.t += dt;
+      const x=g.bx + Math.sin(g.t*g.wf)*g.amp;
+      g.el.style.setProperty("--gx", x+"px");
+      g.el.style.setProperty("--gy", g.y+"px");
+      if(!g.el.classList.contains("selected"))
+        g.el.style.transform="translate("+x+"px,"+g.y+"px)";
+      if(g.y >= reach){
+        leak(g, i);
+        if(!S.running) break;          // gameOver() may have cleared all germs
+      }
+    }
+
+    // level clear?
+    if(S.spawned>=S.target && S.germs.length===0 && S.running && !S.over){
+      levelComplete(); return;
+    }
+    S.raf=requestAnimationFrame(loop);
+  }
+
+  function spawnGerm(){
+    const lv=LEVELS[S.level];
+    const id=lv.pool[Math.floor(Math.random()*lv.pool.length)];
+    const p=BUG[id];
+    const el=document.createElement("div");
+    el.className="germ gram-"+p.gram+(p.mdr?" mdr":"");
+    el.innerHTML='<div class="spikes"></div>'+
+      (p.mdr?'<div class="mdrtag">MDR</div>':'')+
+      '<div class="lbl">'+p.abbr+'</div>'+
+      '<div class="face"><div class="eye"><i></i></div><div class="eye"><i></i></div><div class="mouth"></div></div>'+
+      '<div class="reticle"></div><div class="shield"></div>';
+    const maxX=Math.max(20, field.clientWidth-86);
+    const bx=20+Math.random()*(maxX-20);
+    const g={el, data:p, bx, x:bx, y:-90, vy:(lv.speed*(p.mdr?1.15:1))+Math.random()*6,
+             t:Math.random()*6, wf:1.2+Math.random()*1.2, amp:14+Math.random()*22,
+             shielded:false, wrong:0, alive:true};
+    el.style.transform="translate("+bx+"px,-90px)";
+    el.addEventListener("click",(e)=>{e.stopPropagation(); selectGerm(g);});
+    field.appendChild(el);
+    S.germs.push(g);
+  }
+
+  function selectGerm(g){
+    if(!S.running||S.paused) return;
+    S.germs.forEach(o=>o.el.classList.remove("selected"));
+    g.el.classList.add("selected");
+    // lock transform to current x for selected (scale handled in CSS via class)
+    const x=g.bx + Math.sin(g.t*g.wf)*g.amp;
+    g.el.style.setProperty("--gx", x+"px");
+    g.el.style.setProperty("--gy", g.y+"px");
+    S.selected=g;
+    clearHintGlow();
+    showBubble(g.data);
+  }
+
+  function fireDrug(drugId){
+    if(!S.running||S.paused) return;
+    const g=S.selected;
+    if(!g || !g.alive){ toastFact("👆 <b>Tap a microbe first</b>, then fire a drug."); return; }
+    sArtillery(); sZap(); fireBeam(g);
+    if(g.data.eff.indexOf(drugId)>=0){ correctKill(g, drugId); }
+    else { wrongHit(g, drugId); }
+  }
+
+  function correctKill(g, drugId){
+    g.alive=false;
+    const rect=germCenter(g);
+    boom(rect.x, rect.y, POW[Math.floor(Math.random()*POW.length)], false);
+    burst(rect.x, rect.y); sBoom(); say("Ouch", 0.5, 0.72);
+    S.combo++;
+    const mult=S.combo;
+    const pts=(g.data.mdr?150:100)*mult;
+    S.score+=pts;
+    S.cleared++;
+    removeGerm(g);
+    toastFact("✅ "+g.data.fact);
+    updateHUD();
+    if(S.selected===g){ S.selected=null; hideBubble(); }
+  }
+
+  function wrongHit(g, drugId){
+    const rect=germCenter(g);
+    boom(rect.x, rect.y, BAD[Math.floor(Math.random()*BAD.length)], true);
+    sBad(); smokerLaugh();
+    S.combo=0;
+    g.wrong++;
+    if(!g.shielded){ g.shielded=true; g.el.classList.add("shielded"); }
+    g.vy *= 1.18; // it speeds up, angry
+    toastFact("❌ <b>"+DRUG[drugId].name+"</b> won't kill <b>"+g.data.name+"</b>. "+g.data.fact);
+    updateHUD();
+  }
+
+  function leak(g, i){
+    if(!g.alive){ return; }
+    g.alive=false;
+    S.combo=0;
+    S.lives--;
+    sLife(); tauntLaugh();
+    flashPatient();
+    toastFact("💔 <b>"+g.data.name+"</b> reached the patient!");
+    g.el.remove();
+    S.germs.splice(i,1);
+    updateHUD();
+    if(S.selected===g){ S.selected=null; hideBubble(); }
+    if(S.lives<=0){ gameOver(); }
+  }
+
+  function removeGerm(g){
+    const idx=S.germs.indexOf(g);
+    if(idx>=0) S.germs.splice(idx,1);
+    g.el.style.transition="transform .25s ease, opacity .25s ease";
+    g.el.style.opacity="0";
+    g.el.style.transform=g.el.style.transform+" scale(.2)";
+    setTimeout(()=>g.el.remove(),260);
+  }
+  function clearGerms(){ S.germs.forEach(g=>g.el.remove()); S.germs=[]; S.selected=null; hideBubble(); }
+
+  // ---------------- HINT ----------------
+  function useHint(){
+    if(!S.running||S.paused) return;
+    if(!S.selected){ toastFact("👆 Select a microbe, then tap <b>Hint</b>."); return; }
+    if(S.hints<=0){ toastFact("💡 <b>No hints left!</b> Trust your training."); return; }
+    S.hints--;
+    clearHintGlow();
+    S.selected.data.eff.forEach(id=>{
+      const chip=arsenalEl.querySelector('.chip[data-id="'+id+'"]');
+      if(chip) chip.classList.add("hintglow");
+    });
+    setTimeout(clearHintGlow, 3500);
+    sDing();
+    updateHUD();
+  }
+  function clearHintGlow(){ arsenalEl.querySelectorAll(".chip.hintglow").forEach(c=>c.classList.remove("hintglow")); }
+
+  // ---------------- BUBBLE / FACT ----------------
+  function showBubble(p){
+    bubble.innerHTML='<span class="tag">'+gramName[p.gram]+'</span><b>'+p.name+'</b> — '+p.clue;
+    bubble.style.display="block";
+  }
+  function hideBubble(){ bubble.style.display="none"; }
+  let factTimer=null;
+  function toastFact(html){
+    factEl.innerHTML=html; factEl.style.display="block";
+    clearTimeout(factTimer); factTimer=setTimeout(()=>factEl.style.display="none", 4200);
+  }
+
+  // ---------------- FX ----------------
+  function germCenter(g){
+    const x=(parseFloat(g.el.style.getPropertyValue("--gx"))||g.bx)+33;
+    const y=g.y+33;
+    return {x, y};
+  }
+  function boom(x,y,word,bad){
+    const d=document.createElement("div");
+    d.className="boom"+(bad?" bad":""); d.style.left=x+"px"; d.style.top=y+"px";
+    d.innerHTML='<div class="word">'+word+'</div>';
+    field.appendChild(d); setTimeout(()=>d.remove(),720);
+  }
+  function burst(x,y){
+    const d=document.createElement("div"); d.className="burst";
+    d.style.left=x+"px"; d.style.top=y+"px";
+    field.appendChild(d); setTimeout(()=>d.remove(),560);
+  }
+  function fireBeam(g){
+    const c=germCenter(g);
+    const sx=field.clientWidth/2, sy=field.clientHeight-48;
+    const dx=c.x-sx, dy=c.y-sy, len=Math.hypot(dx,dy), ang=Math.atan2(dy,dx)*180/Math.PI;
+    const b=document.createElement("div"); b.className="beam";
+    b.style.left=sx+"px"; b.style.top=sy+"px"; b.style.width=len+"px";
+    b.style.transform="rotate("+ang+"deg)";
+    b.style.background="linear-gradient(90deg,#fff,"+(g.data.eff.length?"#ffd23f":"#fff")+")";
+    field.appendChild(b); setTimeout(()=>b.remove(),240);
+  }
+  function flashPatient(){
+    const pt=$("#patient"); pt.style.transition="none"; pt.style.background="var(--red)";
+    setTimeout(()=>{ pt.style.transition="background .5s"; pt.style.background=""; },60);
+  }
+
+  // ---------------- HUD ----------------
+  function updateHUD(){
+    scoreEl.textContent=S.score;
+    levelEl.textContent=S.level+1;
+    heartsEl.textContent = S.lives>0 ? "❤️".repeat(S.lives) : "💀";
+    hintCountEl.textContent=S.hints;
+    comboEl.textContent=S.combo;
+    comboStat.style.display = S.combo>=2 ? "flex" : "none";
+  }
+
+  // ---------------- SCREENS ----------------
+  function show(id){ $("#"+id).classList.add("show"); }
+  function hide(id){ $("#"+id).classList.remove("show"); }
+
+  function levelComplete(){
+    S.running=false; cancelAnimationFrame(S.raf);
+    if(S.level >= LEVELS.length-1){ winGame(); return; }
+    $("#lvlTitle").textContent = "WAVE "+(S.level+1)+" CLEARED!";
+    $("#lvlSub").innerHTML = "Score: <b>"+S.score+"</b> &nbsp;•&nbsp; Lives: "+("❤️".repeat(S.lives))+" &nbsp;•&nbsp; +1 hint earned";
+    S.hints++; updateHUD();
+    sDing();
+    show("levelScreen");
+  }
+  function nextWave(){ hide("levelScreen"); S.level++; clearGerms(); startLevel(); }
+
+  function gameOver(){
+    S.over=true; S.running=false; cancelAnimationFrame(S.raf); clearGerms();
+    S.lastEntry=recordScore(S.score, S.level+1);
+    const best=bestScore();
+    $("#overSub").innerHTML="Reached Wave "+(S.level+1)+" • Final score <b>"+S.score+"</b>"+
+      (S.score>=best?" • 🏆 New best!":" • Best: "+best);
+    show("overScreen");
+  }
+  function winGame(){
+    S.running=false; cancelAnimationFrame(S.raf); clearGerms();
+    let rank="Antibiotic Intern";
+    if(S.score>=7000) rank="ANTIMICROBIAL AVENGER 🏆";
+    else if(S.score>=4500) rank="Stewardship Specialist 🌟";
+    else if(S.score>=2500) rank="Clinical Pharmacist 💊";
+    S.lastEntry=recordScore(S.score, LEVELS.length);
+    const best=bestScore();
+    $("#winSub").innerHTML="All outbreaks contained! Final score <b>"+S.score+"</b>"+
+      (S.score>=best?" • 🏆 New best!":" • Best: "+best);
+    $("#rank").textContent="Rank: "+rank;
+    playVictoryTheme();
+    show("winScreen");
+  }
+
+  // ---------------- CONTROLS ----------------
+  $("#playBtn").addEventListener("click",()=>{ ac(); hide("startScreen"); S.over=false; startGame(); });
+  $("#codexBtn").addEventListener("click",()=>show("codexScreen"));
+  $("#codexClose").addEventListener("click",()=>hide("codexScreen"));
+  $("#hintBtn").addEventListener("click",useHint);
+  $("#nextBtn").addEventListener("click",nextWave);
+  $("#retryBtn").addEventListener("click",()=>{ hide("overScreen"); S.over=false; startGame(); });
+  $("#winRetry").addEventListener("click",()=>{ hide("winScreen"); S.over=false; startGame(); });
+  $("#resumeBtn").addEventListener("click",()=>{ hide("pauseScreen"); S.paused=false; S.last=performance.now(); });
+  $("#restartBtn").addEventListener("click",()=>{ hide("pauseScreen"); S.over=false; startGame(); });
+  $("#pauseBtn").addEventListener("click",()=>{
+    if(!S.running) return;
+    S.paused=!S.paused;
+    if(S.paused) show("pauseScreen"); else { hide("pauseScreen"); S.last=performance.now(); }
+  });
+  $("#muteBtn").addEventListener("click",function(){
+    S.muted=!S.muted; this.textContent=S.muted?"🔇":"🔊"; this.classList.toggle("muted",S.muted);
+    if(S.muted){ stopMusic(); if("speechSynthesis" in window){ try{speechSynthesis.cancel();}catch(e){} } }
+  });
+  const speedSlider=$("#speedSlider"), speedVal=$("#speedVal");
+  speedSlider.addEventListener("input",function(){
+    S.speedMul=parseFloat(this.value)||1; speedVal.textContent=S.speedMul.toFixed(1)+"×";
+  });
+  field.addEventListener("click",()=>{ /* tap empty space = deselect */
+    if(S.selected){ S.selected.el.classList.remove("selected"); S.selected=null; hideBubble(); clearHintGlow(); }
+  });
+
+  $("#creditLine").innerHTML="Built by <b>RPh. Shaikh Hussam Lateef</b> — BS-Pharmacy, PharmD, MSc. Pharmacotherapy &amp; Medicines Management";
+  $("#gateCredit").innerHTML="THI Pharmacy Services • RPh. Shaikh Hussam Lateef";
+
+  // ---- scoreboard (offline localStorage, in-memory fallback) ----
+  const LB_KEY="mm_scores_v1";
+  let memScores=[];
+  try{ memScores=JSON.parse(localStorage.getItem(LB_KEY))||[]; }catch(e){ memScores=[]; }
+  function persistScores(){ try{ localStorage.setItem(LB_KEY, JSON.stringify(memScores)); }catch(e){} }
+  function getPlayerName(){ const v=(($("#playerName").value)||"").trim().slice(0,14); return v||"Player"; }
+  function recordScore(score,wave){
+    const entry={ id:Date.now()+"_"+Math.random().toString(36).slice(2,6),
+                  name:getPlayerName(), score:score, wave:wave, date:Date.now() };
+    memScores.push(entry);
+    memScores.sort((a,b)=>b.score-a.score || a.date-b.date);
+    if(memScores.length>100) memScores=memScores.slice(0,100);
+    persistScores();
+    return entry;
+  }
+  function bestScore(){ return memScores.reduce((m,s)=>Math.max(m,s.score),0); }
+  function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+  function fmtDate(ts){ try{ return new Date(ts).toLocaleDateString(undefined,{month:"short",day:"numeric"}); }catch(e){ return ""; } }
+  function renderScoreboard(highlightId){
+    const list=$("#scoreList");
+    const arr=memScores.slice().sort((a,b)=>b.score-a.score || a.date-b.date);
+    if(!arr.length){ list.innerHTML='<div class="score-empty">No scores yet — be the first to make the board!</div>'; return; }
+    let html="";
+    arr.slice(0,12).forEach((e,i)=>{
+      const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":("#"+(i+1));
+      const cls="score-row"+(i<3?(" top"+(i+1)):"")+(e.id===highlightId?" me":"");
+      html+='<div class="'+cls+'"><div class="rk">'+medal+'</div>'+
+            '<div class="nm">'+esc(e.name)+'<small>Wave '+e.wave+' • '+fmtDate(e.date)+(e.id===highlightId?' • this run':'')+'</small></div>'+
+            '<div class="sc">'+e.score+'</div></div>';
+    });
+    list.innerHTML=html;
+  }
+  function openScores(highlightId){ renderScoreboard(highlightId||null); show("scoreScreen"); }
+  $("#startScores").addEventListener("click",()=>openScores(null));
+  $("#pauseScores").addEventListener("click",()=>openScores(null));
+  $("#overScores").addEventListener("click",()=>openScores(S.lastEntry&&S.lastEntry.id));
+  $("#winScores").addEventListener("click",()=>openScores(S.lastEntry&&S.lastEntry.id));
+  $("#scoreClose").addEventListener("click",()=>hide("scoreScreen"));
+  $("#scoreClear").addEventListener("click",()=>{
+    if(confirm("Clear all saved scores? This cannot be undone.")){ memScores=[]; persistScores(); renderScoreboard(null); }
+  });
+
+  // ---- access gate ----
+  const PASS="hussam123";
+  function tryUnlock(){
+    const v=($("#gatePass").value||"").trim();
+    if(v===PASS){
+      ac();                       // prime audio within the unlock gesture
+      $("#gateErr").classList.remove("show");
+      hide("gateScreen");
+      show("startScreen");
+    } else {
+      const card=$("#gateScreen .card");
+      $("#gateErr").classList.add("show");
+      card.classList.remove("shake"); void card.offsetWidth; card.classList.add("shake");
+      $("#gatePass").value=""; $("#gatePass").focus();
+    }
+  }
+  $("#gateBtn").addEventListener("click",tryUnlock);
+  $("#gatePass").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); tryUnlock(); } });
+
+  // keyboard: space pause (ignore while typing)
+  window.addEventListener("keydown",e=>{
+    const t=e.target;
+    if(t && (t.tagName==="INPUT"||t.tagName==="TEXTAREA")) return;
+    if(e.code==="Space"){ e.preventDefault(); $("#pauseBtn").click(); }
+  });
+
+})();
+</script>
+</body>
+</html>
